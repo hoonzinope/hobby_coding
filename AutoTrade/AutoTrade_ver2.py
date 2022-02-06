@@ -84,7 +84,7 @@ def get_crr(df, fees, K) :
     return df['drr'].cumprod()[-2]
 
 def get_best_K(coin, fees) :
-    df = pyupbit.get_ohlcv(coin, interval = "day", count = 21)
+    df = pyupbit.get_ohlcv(coin, interval = "day", count = 7)
     max_crr = 0
     best_K = 0.5
     for k in np.arange(0.0, 1.0, 0.1) :
