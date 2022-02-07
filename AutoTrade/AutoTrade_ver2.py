@@ -108,6 +108,7 @@ if __name__ == '__main__':
         fees = 0.0005
         K = 0.5
         
+        ma7 = get_ma7(coin)
         start_balance = upbit.get_balance("KRW")
         df = pyupbit.get_ohlcv(coin, count = 2, interval = "day")
         targetPrice = get_targetPrice(df, get_best_K(coin, fees))
