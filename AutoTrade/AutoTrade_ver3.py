@@ -93,7 +93,7 @@ def get_best_K(coin, fees) :
     df = pyupbit.get_ohlcv(coin, interval = "day", count = 21)
     max_crr = 0
     best_K = 0.5
-    for k in np.arange(0.1, 1.0, 0.1) :
+    for k in np.arange(0.0, 1.0, 0.1) :
         crr = get_crr(df, fees, k)
         if crr > max_crr :
             max_crr = crr
@@ -109,29 +109,29 @@ def get_coin_ver2(tickers): # K값이 가장 작은 코인을 선택
     return sorted_recomm[0][0]
 
 if __name__ == '__main__': 
+    upbit = pyupbit.Upbit(access, secret)
+
+    # set variables
+    coin = "KRW-BTC"
+    tickers = ['KRW-BTC',"KRW-ETH"] #,"KRW-ETC",'KRW-XRP','KRW-ADA','KRW-BCH',"KRW-DOT",'KRW-XLM']
+
     try:
-        upbit = pyupbit.Upbit(access, secret)
-
-        # set variables
+        coin = get_coin_ver2(tickers=tickers)
+    except:
         coin = "KRW-BTC"
-        tickers = ['KRW-BTC',"KRW-ETH","KRW-ETC",'KRW-XRP','KRW-ADA','KRW-BCH',"KRW-DOT",'KRW-XLM']
- 
+
+    fees = 0.0005
+    K = 0.5
+    
+    ma7 = get_ma7(coin)
+    start_balance = upbit.get_balance("KRW")
+    df = pyupbit.get_ohlcv(coin, count = 2, interval = "day")
+    targetPrice = get_targetPrice(df, get_best_K(coin, fees))
+    print(datetime.datetime.now().strftime('%y/%m/%d %H:%M:%S'), "\t\tBalance :", start_balance, "KRW \t\tYield :", ((start_balance / start_balance) - 1) * 100, "% \t\tNew targetPrice :", targetPrice, "KRW")
+    post_message("자동매매를 시작합니다.\n잔액 : "+str(start_balance)+" 원\n"+coin+" 목표매수가 : "+str(targetPrice)+" 원")
+
+    while True :
         try:
-            coin = get_coin_ver2(tickers=tickers)
-        except:
-            coin = "KRW-BTC"
-
-        fees = 0.0005
-        K = 0.5
-        
-        ma7 = get_ma7(coin)
-        start_balance = upbit.get_balance("KRW")
-        df = pyupbit.get_ohlcv(coin, count = 2, interval = "day")
-        targetPrice = get_targetPrice(df, get_best_K(coin, fees))
-        print(datetime.datetime.now().strftime('%y/%m/%d %H:%M:%S'), "\t\tBalance :", start_balance, "KRW \t\tYield :", ((start_balance / start_balance) - 1) * 100, "% \t\tNew targetPrice :", targetPrice, "KRW")
-        post_message("자동매매를 시작합니다.\n잔액 : "+str(start_balance)+" 원\n"+coin+" 목표매수가 : "+str(targetPrice)+" 원")
-
-        while True :
             now = datetime.datetime.now()
             if now.hour == 9 and now.minute == 2 :    # when am 09:02:00
                 sell_all(coin)
@@ -163,12 +163,11 @@ if __name__ == '__main__':
                         if end_time > now :
                             time.sleep((end_time - now).seconds)
                 else: # 코인을 산게 없다면 일단 사기 (전액)
-                    if targetPrice <= pyupbit.get_current_price(coin) and ma7 <= pyupbit.get_current_price(coin):
+                    if targetPrice <= pyupbit.get_current_price(coin):# and ma7 <= pyupbit.get_current_price(coin):
                         buy_all(coin)
-    
-            time.sleep(1)
 
-    except Exception as e:
-        print(e)
-        post_message("error occured! check code please!")
-        time.sleep(1)
+            time.sleep(1)
+        except Exception as e:
+            print(e)
+            post_message("error occured! check code please!")
+            time.sleep(1)
