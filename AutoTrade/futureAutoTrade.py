@@ -6,7 +6,6 @@ import datetime
 import math
 import telegram as tel
 
-#nohup python3 futureAutoTrade.py > output_bn.log &
 with open("./binance_api.txt") as file:
     lines = file.readlines()
     api_key = lines[0].strip()
@@ -37,6 +36,8 @@ def post_message(text):
     bot.sendMessage(chat_id=chat_id, text=text) # send message
 
 # long, short count
+global long_enter_count
+global short_enter_count
 long_enter_count = 0
 short_enter_count = 0
 
@@ -51,7 +52,7 @@ def current_balance():
 def current_price(symbol):
     btc = binance.fetch_ticker(symbol)
     cur_price = btc['last']
-    print(cur_price)
+    #print(cur_price)
     return cur_price
 
 def cal_amount(usdt_balance, cur_price):
@@ -63,7 +64,7 @@ def cal_amount(usdt_balance, cur_price):
         amount = int(amount * 1000) / 1000
     else:
         amount = 0
-    print(amount)
+    #print(amount)
     return amount 
 
 # long / short target calculate
@@ -82,11 +83,13 @@ def call_target(symbol):
     today = df.iloc[-1]
     long_target = today['open'] + (yesterday['high'] - yesterday['low']) * K
     short_target = today['open'] - (yesterday['high'] - yesterday['low']) * K
-    print({'long_target' : long_target, 'short_target' : short_target })
+    #print({'long_target' : long_target, 'short_target' : short_target })
     return {'long_target' : long_target, 'short_target' : short_target }
 
 # enter
 def enter_position(symbol, cur_price, long_target, short_target, amount, position):
+    global long_enter_count
+    global short_enter_count
     if cur_price > long_target:         # cur_price > long 
         if long_enter_count > 3:
             position['type'] = 'long'
@@ -94,7 +97,7 @@ def enter_position(symbol, cur_price, long_target, short_target, amount, positio
             order = binance.create_market_buy_order(symbol=symbol, amount=amount)
             position['price'] = order['price']
             op_mode = False
-            post_message(position['type']+" 포지션 진입\n"+position['price']+","+position['amount'])
+            post_message(position['type']+" 포지션 진입\n"+str(position['price'])+","+str(position['amount']))
         else:
             long_enter_count += 1
             short_enter_count = 0
@@ -106,13 +109,15 @@ def enter_position(symbol, cur_price, long_target, short_target, amount, positio
             order = binance.create_market_sell_order(symbol=symbol, amount=amount)
             position['price'] = order['price']
             op_mode = False
-            post_message(position['type']+" 포지션 진입\n"+position['price']+","+position['amount'])
+            post_message(position['type']+" 포지션 진입\n"+str(position['price'])+","+str(position['amount']))
         else:
             short_enter_count += 1
             long_enter_count = 0
 
 # exit 
 def exit_position(symbol, position):
+    global long_enter_count
+    global short_enter_count
     amount = position['amount']
     if position['type'] == 'long':
         binance.create_market_sell_order(symbol=symbol, amount=amount)
@@ -146,7 +151,7 @@ def check_exit(position, cur_price):
 
 if __name__ == '__main__': 
 
-    target_value = {}
+    target_value = call_target(symbol=symbol)
     balance = current_balance()
 
     post_message("선물매매를 시작합니다.\n잔액 : "+str(balance)+" usd\n")
@@ -167,10 +172,6 @@ if __name__ == '__main__':
                 balance = current_balance()
                 op_mode = True
                 time.sleep(10)
-
-            if len(target_value) == 0:
-                target_value = call_target(symbol=symbol)
-
 
             if position['type'] == None:
                 cur_price = current_price(symbol=symbol)
@@ -194,8 +195,8 @@ if __name__ == '__main__':
                 else:
                     time.sleep(1)
                     continue
-        except:
-            post_message("선물 거래 코드 에러 발생")
+        except Exception as e:
+            post_message("선물 거래 코드 에러 발생\n"+str(e))
             time.sleep(1)
-            continue
+            break
 
