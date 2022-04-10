@@ -3,6 +3,7 @@ import tweepy
 from bs4 import BeautifulSoup
 import random
 import json
+import time
 
 _url = ""
 api_key = ""
@@ -48,5 +49,11 @@ if __name__ == '__main__':
     auth.set_access_token(Access_token,Access_secret_token)
     api=tweepy.API(auth)
 
-    tweet=random_text()
-    api.update_status(tweet)
+    while True:
+        try:
+            tweet=random_text()
+            api.update_status(tweet)
+            time.sleep(600)
+        except:
+            time.sleep(60)
+            continue
