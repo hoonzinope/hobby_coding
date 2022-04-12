@@ -5,6 +5,7 @@ import numpy as np
 import datetime
 import math
 import telegram as tel
+import sys, os
 
 with open("./binance_api.txt") as file:
     lines = file.readlines()
@@ -18,7 +19,7 @@ position = {
     "amount": 0,
     "price" : 0,
 }
-K = 0.5
+K = 0.3
 symbol = "BTC/USDT"
 op_mode = True
 binance = ccxt.binance(config={
@@ -54,6 +55,16 @@ def current_price(symbol):
     cur_price = btc['last']
     #print(cur_price)
     return cur_price
+
+#position exist check
+def current_position_check(symbol, position):
+    infos = binance.fetchPositions()
+    for info in infos:
+        if info['info']['symbol'] == symbol:
+            if info['contracts'] > 0.0:
+                position['type'] = info['side']
+                position['amount'] = info['contracts']
+                position['price'] = info['entryPrice']
 
 def cal_amount(usdt_balance, cur_price):
     portion = 1 
@@ -113,7 +124,7 @@ def enter_position(symbol, cur_price, long_target, short_target, amount, positio
         else:
             short_enter_count += 1
             long_enter_count = 0
-
+    
 # exit 
 def exit_position(symbol, position):
     global long_enter_count
@@ -138,31 +149,36 @@ def check_exit(position, cur_price):
     else:
         if position['type'] == 'long':
             diff = (cur_price - position['price']) / cur_price * 100
-            if diff >= 0.05 or diff <= -0.1:
+            if diff >= 5 or diff <= -10:
                 return True
             else:
                 return False
         if position['type'] == 'short':
             diff = (position['price'] - cur_price) / cur_price * 100
-            if diff >= 0.05 or diff <= -0.1:
+            if diff >= 5 or diff <= -10:
                 return True
             else:
                 return False
 
 if __name__ == '__main__': 
-
+    
+    cur_price = current_price(symbol=symbol)
     target_value = call_target(symbol=symbol)
     balance = current_balance()
+    str_info = "cur_price : {}, long_target : {}, short_target : {}".format(cur_price, target_value['long_target'], target_value['short_target'])
+    post_message("선물매매를 시작합니다.\n잔액 : "+str(balance)+" usd\n"+str_info)
 
-    post_message("선물매매를 시작합니다.\n잔액 : "+str(balance)+" usd\n")
-
+    current_position_check(symbol=symbol, position=position)
+    if position['amount'] > 0.0:
+        post_message("기존 포지션이 남아있습니다.\n position : {}\n price : {}\n amount : {}\n".format(position['type'], position['price'], position['amount']))
+        
     while True:
         try:
             now = datetime.datetime.now()
 
             if now.hour == 8 and now.minute == 50 and (0 <= now.second < 10):
                 if op_mode and position['type'] is not None:
-                    exit_position(binance, symbol)
+                    exit_position(symbol,position)
                     op_mode = False
                     
 
@@ -186,9 +202,10 @@ if __name__ == '__main__':
                         amount=amount,
                         position=position
                     )
+                    time.sleep(1)
             else:
                 if check_exit(position=position, cur_price=cur_price):
-                    exit_position(binance, symbol)
+                    exit_position(symbol, position)
                     op_mode = False
                     balance = current_balance()
                     post_message("현재 잔액 : "+str(balance)+" usd\n")
@@ -196,7 +213,8 @@ if __name__ == '__main__':
                     time.sleep(1)
                     continue
         except Exception as e:
-            post_message("선물 거래 코드 에러 발생\n"+str(e))
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            post_message("선물 거래 코드 에러 발생\n"+str(e)+"line:"+str(exc_tb.tb_lineno))
             time.sleep(1)
-            break
+            continue
 
