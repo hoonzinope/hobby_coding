@@ -20,7 +20,8 @@ python
 
   - [블로그 정리](https://hoonzi-text.tistory.com/92)
   
-    
+- ㅇㅎ 게시물 수집기 & 사이트 구성
+  - [블로그 정리](https://hoonzi-text.tistory.com/97)
   
 
 
