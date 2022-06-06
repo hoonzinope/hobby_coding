@@ -23,7 +23,8 @@ python
 - ㅇㅎ 게시물 수집기 & 사이트 구성
   - [블로그 정리](https://hoonzi-text.tistory.com/97)
   
-
+- 온라인 뉴스 클러스터링
+  - [블로그 정리](https://hoonzi-text.tistory.com/100)
 
 javascript
 
