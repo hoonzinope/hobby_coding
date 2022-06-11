@@ -24,51 +24,30 @@ with open("tweet_api.json", "r") as temp_json:
     _url = temp_dict['url']
     _url2 = temp_dict['url2']
     
-def random_text():
-    url = _url
-    headers = {
-        "user-agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36"
-    }
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    text_list = []
-    for td in soup.select('.listsubject.sbj'):
-        text = td.text.strip()
-        if len(text) < 3:
-            continue
-        text_list.append(text)
-        
-    if len(text_list) == 0:
-        return None
-    else:
-        rand_index = random.randint(1,len(text_list))
-        return text_list[rand_index]
+def random_text_ver3(api): # korea woeid = 23424868
+    hot_topics = []
+    for obj in api.available_trends():
+        if obj['countryCode'] == "KR":
+            if obj['name'] == "Korea":
+                hot_topics = api.get_place_trends(obj['woeid'])
+                break
+    topic = hot_topics[0]['trends'][random.randint(0, len(hot_topics[0]['trends']))]
+    # print(topic,topic['query'])
+    for i in range(len(hot_topics[0]['trends'])):
+        if hot_topics[0]['trends'][i]['tweet_volume'] == None:
+            hot_topics[0]['trends'][i]['tweet_volume'] = 0
 
-def random_text_ver2():
-    url = _url2
-    headers = {
-        "user-agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36"
-    }
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    text_list = []
-    table = soup.select("tbody.hide_notice")[0]
-    for tr in table.select('tr'):
-        if tr.get('class') == None:
-            for a in tr.find_all('a'):
-                if a.get('class') == None:
-                    text_list.append(a.text)
-                    
-    if len(text_list) == 0:
-        return None
-    else:
-        rand_index = random.randint(1,len(text_list))
-        text = text_list[rand_index]
-        if text[-1].isdigit():
-            text = text[:-1]
-        return text
+    hot_topics = sorted(hot_topics[0]['trends'], key=lambda x : x['tweet_volume'], reverse=True)
+    topic = hot_topics[random.randint(0, len(hot_topics))]
+    search_result = api.search_tweets(q=topic['query'], result_type="mixed", count=10)
+
+    # no RT, no url
+    text = ""
+    for result in search_result:
+        if "t" not in result.text and "T" not in result.text:
+            text = result.text
+            break
+    api.update_status(text)
 
 if __name__ == '__main__': 
     #authenticating to access the twitter API
@@ -76,11 +55,11 @@ if __name__ == '__main__':
     auth.set_access_token(Access_token,Access_secret_token)
     api=tweepy.API(auth)
 
+    # random_text_ver3(api)
     while True:
         try:
-            tweet=random_text()
-            api.update_status(tweet)
-            time.sleep(600)
+            random_text_ver3(api)
+            time.sleep(random.randint(300,600))
         except:
             time.sleep(60)
             continue
