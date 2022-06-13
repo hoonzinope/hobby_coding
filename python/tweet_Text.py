@@ -44,7 +44,7 @@ def random_text_ver3(api): # korea woeid = 23424868
     # no RT, no url
     text = ""
     for result in search_result:
-        if "t" not in result.text and "T" not in result.text:
+        if "t" not in result.text and "T" not in result.text and "@" not in result.text:
             text = result.text
             break
     api.update_status(text)
